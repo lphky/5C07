@@ -24,4 +24,4 @@
 
 執行 `node --check game.js` 和 `node test.cjs`。完整紀錄見 TEST-RESULTS.md。
 
-GitHub 專案設為私人，未啟用公開網站。
+依使用者 2026-11-02 指示公開。網站：https://lphky.github.io/5C07/ 。GitHub 專案為公開，Pages 使用 main 分支根目錄發布。
