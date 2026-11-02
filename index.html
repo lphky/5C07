@@ -1,6 +1,114 @@
 <!DOCTYPE html>
-<html lang="zh-HK"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>哈利波特：霍格華茲巔峰魔咒決鬥</title><link rel="stylesheet" href="style.css"></head><body>
-<header><h1>哈利波特：魔咒決鬥</h1><p>搶四勝賽制 · 光束特效 · 索命咒反噬</p></header>
-<main><section class="duel-stage"><canvas id="fx-canvas" aria-hidden="true"></canvas><div class="duel-side" id="team1"></div><div class="duel-side" id="team2"></div></section><div id="battle-log" role="log" aria-label="對戰紀錄"></div><section class="controls-panel"><div class="action-header"><strong id="turn-indicator">請選擇模式</strong><span id="round-number"></span><button id="change-mode">切換模式</button></div><div id="spells"></div><div id="target-selector" hidden><p>選擇魔咒施放目標：</p><div id="target-buttons"></div></div><button id="submit-turn-btn" disabled>請先選擇魔咒</button><details><summary>遊戲規則與魔咒說明</summary><p>所有角色先選指令，再一起結算。先防禦、復原及繳械，再按角色順序施放攻擊。同回合的防禦可擋多次攻擊。昏迷會跳過下一次行動，隊友可用復原咒解除；自己昏迷時不能自救。倒下角色不能施法或被治療。</p><p>索命咒命中即贏本局；荒唐咒可擋索命咒，並反噬施法者 40 HP。使用後須等完整 5 回合才能再次使用，每局重設。先取得 4 勝為冠軍。這是非官方學生遊戲，魔咒效果為遊戲自訂。</p></details></section></main>
-<div id="mode-modal" class="modal-overlay"><section class="mode-card" role="dialog" aria-modal="true" aria-labelledby="mode-title"><h2 id="mode-title">⚔️ 霍格華茲決鬥對決</h2><p id="result"></p><button data-mode="1v1">⚔️ 1對1 人機決鬥<small>玩家 vs 電腦</small></button><button data-mode="2v2">🛡️ 2對2 團隊聯盟賽<small>與 AI 盟友並肩作戰</small></button></section></div>
-<script src="game.js"></script></body></html>
+<html lang="zh-HK">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="description" content="霍格華茲魔咒決鬥：1 對 1 或 2 對 2 回合制魔咒對戰，先取得 4 局勝利者奪冠。非官方學生作品。">
+<title>霍格華茲魔咒決鬥</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header class="topbar">
+  <div class="brand">
+    <span class="brand-mark" aria-hidden="true">⚡</span>
+    <div><h1>魔咒決鬥</h1><p>霍格華茲 · 先取 4 勝</p></div>
+  </div>
+  <div class="scoreboard" aria-label="比分">
+    <div class="score-side team1"><span class="score-name">玩家隊</span><span class="pips" id="pips-1"></span></div>
+    <div class="score-mid"><strong id="round-label">第 1 局</strong><span id="turn-label">回合 1</span></div>
+    <div class="score-side team2"><span class="pips" id="pips-2"></span><span class="score-name">電腦隊</span></div>
+  </div>
+  <div class="toolbar">
+    <label class="speed-label">結算速度
+      <select id="speed">
+        <option value="slow">慢</option>
+        <option value="normal">標準</option>
+        <option value="fast">快</option>
+        <option value="step">逐步（自己按）</option>
+      </select>
+    </label>
+    <button id="rules-btn" class="ghost" type="button">規則</button>
+    <button id="menu-btn" class="ghost" type="button">選單</button>
+  </div>
+</header>
+
+<main>
+  <section class="arena" id="arena" aria-label="決鬥場">
+    <canvas id="fx-canvas" aria-hidden="true"></canvas>
+    <div class="team-col team1" id="team1" aria-label="玩家隊"></div>
+    <div class="stage-center">
+      <div class="banner" id="banner" aria-live="polite"></div>
+      <div class="playback" id="playback" hidden>
+        <span class="pb-progress" id="pb-progress"></span>
+        <button id="pb-next" class="primary small" type="button">下一步 ▶</button>
+        <button id="pb-skip" class="ghost small" type="button">略過動畫</button>
+      </div>
+    </div>
+    <div class="team-col team2" id="team2" aria-label="電腦隊"></div>
+  </section>
+
+  <div class="lower">
+    <section class="command" id="command" aria-label="魔咒指令">
+      <ol class="steps" id="steps">
+        <li>選擇魔咒</li>
+        <li>選擇目標</li>
+        <li>確認發動</li>
+      </ol>
+      <div class="command-body">
+        <div class="spells" id="spells"></div>
+        <aside class="detail" id="detail"></aside>
+      </div>
+      <div class="command-lock" id="command-lock" hidden></div>
+    </section>
+
+    <details class="log-panel" id="log-panel" open>
+      <summary>對戰紀錄</summary>
+      <div id="battle-log" role="log" aria-label="對戰紀錄"></div>
+    </details>
+  </div>
+</main>
+
+<dialog id="mode-dialog" aria-labelledby="mode-title">
+  <div class="dialog-card">
+    <p class="dialog-kicker">霍格華茲決鬥社</p>
+    <h2 id="mode-title">⚔️ 魔咒決鬥</h2>
+    <ol class="howto">
+      <li><span>1</span><div><strong>選魔咒</strong>攻擊、黑魔法、防禦或支援</div></li>
+      <li><span>2</span><div><strong>選目標</strong>點目標按鈕或直接點角色卡</div></li>
+      <li><span>3</span><div><strong>看結算</strong>所有人同時出手，逐步揭曉結果</div></li>
+    </ol>
+    <div class="mode-options">
+      <button class="mode-btn" data-mode="1v1" type="button"><span class="mode-icon">⚔️</span><span><strong>1 對 1 決鬥</strong><small>你 vs 電腦，適合第一次玩</small></span></button>
+      <button class="mode-btn" data-mode="2v2" type="button"><span class="mode-icon">🛡️</span><span><strong>2 對 2 團隊戰</strong><small>與 AI 盟友合作，對抗兩名電腦</small></span></button>
+    </div>
+    <button id="resume-btn" class="ghost wide" type="button" hidden>返回目前對戰</button>
+    <p class="fineprint">非官方學生作品，魔咒效果為遊戲自訂。</p>
+  </div>
+</dialog>
+
+<dialog id="result-dialog" aria-labelledby="result-title">
+  <div class="dialog-card result-card" id="result-card"></div>
+</dialog>
+
+<dialog id="rules-dialog" aria-labelledby="rules-title">
+  <div class="dialog-card rules-card">
+    <div class="dialog-head"><h2 id="rules-title">遊戲規則</h2><button class="ghost small" id="rules-close" type="button">關閉</button></div>
+    <h3>目標</h3>
+    <p>每局把對方全隊 HP 打到 0，或用索命咒命中對手，即贏得該局。先取得 <strong>4</strong> 局勝利的一隊奪冠。</p>
+    <h3>每回合流程</h3>
+    <ol class="flow">
+      <li>所有巫師<strong>同時</strong>選擇指令（電腦不會偷看你的選擇）。</li>
+      <li>指令一起揭曉。</li>
+      <li>按優先次序結算：<strong>復原咒 → 防禦（屏障、護法、荒唐）→ 繳械 → 其他魔咒</strong>（按 P1→P4 次序）。</li>
+      <li>被昏迷的巫師跳過下一次行動，隊友可用復原咒救醒。</li>
+    </ol>
+    <h3>魔咒一覽</h3>
+    <div class="table-wrap"><table id="rules-table"><thead><tr><th>魔咒</th><th>類別</th><th>效果</th></tr></thead><tbody></tbody></table></div>
+    <h3>閱讀節奏</h3>
+    <p>右上角「結算速度」可選慢、標準、快或「逐步」。逐步模式下每一步都要按「下一步」才繼續。結算期間亦可點決鬥場中央直接看下一步。</p>
+  </div>
+</dialog>
+
+<script src="game.js"></script>
+</body>
+</html>
