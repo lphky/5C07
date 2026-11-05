@@ -1,268 +1,114 @@
 <!DOCTYPE html>
-<html lang="zh-HK" class="dark">
+<html lang="zh-HK">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>哈利波特：魔咒對決 (首勝4局完結版)</title>
-  <!-- Tailwind CSS -->
-  <script src="https://cdn.tailwindcss.com"></script>
-  <!-- FontAwesome Icons -->
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700;900&family=Noto+Serif+TC:wght@600;900&display=swap" rel="stylesheet">
-  
-  <script>
-    tailwind.config = {
-      darkMode: 'class',
-      theme: {
-        extend: {
-          colors: {
-            gold: '#f3c644',
-          },
-          fontFamily: {
-            cinzel: ['Cinzel', 'serif'],
-            serifTC: ['Noto Serif TC', 'serif']
-          }
-        }
-      }
-    }
-  </script>
-
-  <style>
-    body {
-      background-color: #090c15;
-      color: #f1f5f9;
-      font-family: 'Noto Serif TC', serif;
-      user-select: none;
-      touch-action: manipulation;
-      overflow-x: hidden;
-    }
-
-    .float-dmg {
-      position: fixed;
-      font-weight: 900;
-      font-family: 'Cinzel', serif;
-      pointer-events: none;
-      z-index: 50;
-      animation: floatUp 1.2s ease-out forwards;
-    }
-
-    @keyframes floatUp {
-      0% { opacity: 1; transform: translateY(0) scale(0.8); }
-      40% { opacity: 1; transform: translateY(-20px) scale(1.3); }
-      100% { opacity: 0; transform: translateY(-50px) scale(1); }
-    }
-    .spell-card:focus-visible { outline: 3px solid #f3c644; outline-offset: 3px; }
-    .spell-card[aria-disabled="true"] { opacity: .45; cursor: not-allowed; }
-    #stageArena { min-height: 300px; }
-    #battleLogText { white-space: normal; overflow-wrap: anywhere; }
-    #battleLogText { display: block; }
-    @media(max-width:600px) {
-      main > div:first-child { flex-wrap: wrap; gap: 12px; justify-content: center; }
-      main > div:first-child > div:nth-child(2) { order: 3; width:100%; }
-      #turnFlowPrompt { display:block; }
-    }
-  </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="description" content="霍格華茲魔咒決鬥：1 對 1 或 2 對 2 回合制魔咒對戰，先取得 4 局勝利者奪冠。非官方學生作品。">
+<title>霍格華茲魔咒決鬥</title>
+<link rel="stylesheet" href="style.css">
 </head>
-<body class="min-h-screen flex flex-col justify-between bg-gradient-to-b from-slate-950 via-zinc-950 to-black text-slate-100">
+<body>
+<header class="topbar">
+  <div class="brand">
+    <span class="brand-mark" aria-hidden="true">⚡</span>
+    <div><h1>魔咒決鬥</h1><p>霍格華茲 · 先取 4 勝</p></div>
+  </div>
+  <div class="scoreboard" aria-label="比分">
+    <div class="score-side team1"><span class="score-name">玩家隊</span><span class="pips" id="pips-1"></span></div>
+    <div class="score-mid"><strong id="round-label">第 1 局</strong><span id="turn-label">回合 1</span></div>
+    <div class="score-side team2"><span class="pips" id="pips-2"></span><span class="score-name">電腦隊</span></div>
+  </div>
+  <div class="toolbar">
+    <label class="speed-label">結算速度
+      <select id="speed">
+        <option value="slow">慢</option>
+        <option value="normal">標準</option>
+        <option value="fast">快</option>
+        <option value="step">逐步（自己按）</option>
+      </select>
+    </label>
+    <button id="rules-btn" class="ghost" type="button">規則</button>
+    <button id="menu-btn" class="ghost" type="button">選單</button>
+  </div>
+</header>
 
-  <!-- Header -->
-  <header class="w-full px-4 py-3 bg-zinc-950 border-b border-amber-500/30 flex justify-between items-center shadow-lg relative z-20">
-    <div class="flex items-center space-x-2">
-      <i class="fa-solid fa-wand-magic-sparkles text-amber-400 text-xl"></i>
-      <div>
-        <h1 class="font-cinzel text-lg font-bold text-amber-400 tracking-wider">HARRY POTTER</h1>
-        <p class="text-[10px] text-zinc-400">魔咒決鬥 · 搶4分完結版</p>
+<main>
+  <section class="arena" id="arena" aria-label="決鬥場">
+    <canvas id="fx-canvas" aria-hidden="true"></canvas>
+    <div class="team-col team1" id="team1" aria-label="玩家隊"></div>
+    <div class="stage-center">
+      <div class="banner" id="banner" aria-live="polite"></div>
+      <div class="playback" id="playback" hidden>
+        <span class="pb-progress" id="pb-progress"></span>
+        <button id="pb-next" class="primary small" type="button">下一步 ▶</button>
+        <button id="pb-skip" class="ghost small" type="button">略過動畫</button>
       </div>
     </div>
+    <div class="team-col team2" id="team2" aria-label="電腦隊"></div>
+  </section>
 
-    <button onclick="restartGame()" class="px-3 py-1.5 text-xs bg-amber-500 hover:bg-amber-400 text-zinc-950 font-bold rounded-lg transition-all shadow-md">
-      <i class="fa-solid fa-rotate-right mr-1"></i> 重新開始
-    </button>
-  </header>
-
-  <!-- Main Game Stage -->
-  <main class="container mx-auto px-3 py-3 max-w-4xl flex-1 flex flex-col justify-between gap-3 relative z-10">
-
-    <!-- Score & Turn Flow Header -->
-    <div class="bg-zinc-950 border border-amber-500/30 rounded-xl p-3 shadow-xl flex justify-between items-center">
-      <!-- Player Score -->
-      <div class="flex items-center gap-2">
-        <span class="text-xs font-bold text-blue-400">🧙‍♂️ 玩家</span>
-        <div id="p1ScoreGems" class="flex gap-1"></div>
+  <div class="lower">
+    <section class="command" id="command" aria-label="魔咒指令">
+      <ol class="steps" id="steps">
+        <li>選擇魔咒</li>
+        <li>選擇目標</li>
+        <li>確認發動</li>
+      </ol>
+      <div class="command-body">
+        <div class="spells" id="spells"></div>
+        <aside class="detail" id="detail"></aside>
       </div>
-
-      <!-- Turn Step Indicator -->
-      <div class="text-center">
-        <span id="turnFlowPrompt" class="px-3 py-1 bg-amber-950 border border-amber-500/50 text-amber-300 text-xs font-bold rounded-full shadow">
-          輪到你的回合！(目標：搶 4 分完結)
-        </span>
-      </div>
-
-      <!-- AI Score -->
-      <div class="flex items-center gap-2">
-        <div id="aiScoreGems" class="flex gap-1"></div>
-        <span class="text-xs font-bold text-emerald-400">🦹‍♂️ 電腦 AI</span>
-      </div>
-    </div>
-
-    <!-- Battle Stage Visual Area -->
-    <div id="stageArena" class="relative bg-zinc-950 border-2 border-zinc-800 rounded-2xl h-56 md:h-64 overflow-hidden shadow-2xl flex justify-between items-center px-6 md:px-16">
-      <canvas id="stageCanvas" class="absolute inset-0 w-full h-full pointer-events-none z-10"></canvas>
-
-      <!-- Player Side -->
-      <div id="card-p1" class="relative z-20 w-28 md:w-36 bg-zinc-900 border-2 border-blue-500/50 rounded-xl p-3 flex flex-col items-center transition-all shadow-lg">
-        <div class="w-14 h-14 md:w-20 md:h-20 rounded-full bg-blue-950 border border-blue-400 flex items-center justify-center text-3xl relative mb-1">
-          🧙‍♂️
-          <div id="wand-p1" class="absolute -right-1 top-1/2 w-2 h-2 bg-amber-400 rounded-full"></div>
-        </div>
-        <span class="text-xs font-bold text-blue-300 truncate">你</span>
-        <div class="w-full mt-1.5">
-          <div class="flex justify-between text-[9px] text-zinc-400"><span>HP</span><span id="hp-text-p1">100/100</span></div>
-          <div class="w-full bg-zinc-950 h-2.5 rounded-full overflow-hidden border border-zinc-800">
-            <div id="hp-p1" class="bg-emerald-500 h-full w-full transition-all duration-300"></div>
-          </div>
-        </div>
-      </div>
-
-      <!-- VS Banner -->
-      <div class="font-cinzel text-3xl font-black text-amber-500/30 italic">VS</div>
-
-      <!-- AI Enemy Side -->
-      <div id="card-ai" class="relative z-20 w-28 md:w-36 bg-zinc-900 border-2 border-emerald-500/50 rounded-xl p-3 flex flex-col items-center transition-all shadow-lg">
-        <div class="w-14 h-14 md:w-20 md:h-20 rounded-full bg-emerald-950 border border-emerald-400 flex items-center justify-center text-3xl relative mb-1">
-          🦹‍♂️
-          <div id="wand-ai" class="absolute -left-1 top-1/2 w-2 h-2 bg-amber-400 rounded-full"></div>
-        </div>
-        <span class="text-xs font-bold text-emerald-300 truncate">電腦 AI</span>
-        <div class="w-full mt-1.5">
-          <div class="flex justify-between text-[9px] text-zinc-400"><span>HP</span><span id="hp-text-ai">100/100</span></div>
-          <div class="w-full bg-zinc-950 h-2.5 rounded-full overflow-hidden border border-zinc-800">
-            <div id="hp-ai" class="bg-emerald-500 h-full w-full transition-all duration-300"></div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Battle Log -->
-      <div class="absolute bottom-2 inset-x-3 z-20 bg-zinc-900/90 border border-amber-500/30 rounded-lg p-1.5 text-center text-xs text-amber-200">
-        <i class="fa-solid fa-scroll mr-1 text-amber-400"></i>
-        <span id="battleLogText">比賽開始！率先拿到 4 分者勝出比賽！</span>
-      </div>
-    </div>
-
-    <!-- SPELL DECK - 8 FULL SPELLS -->
-    <div class="bg-zinc-950 border border-amber-500/30 rounded-xl p-3 shadow-xl relative">
-      <div class="flex justify-between items-center mb-2">
-        <h3 class="text-xs font-bold text-amber-400 flex items-center gap-1.5">
-          <i class="fa-solid fa-wand-magic"></i> 請選擇魔咒卡片
-        </h3>
-        <span class="text-[10px] text-zinc-400">8 大魔法魔咒</span>
-      </div>
-
-      <!-- 8 Spells Grid -->
-      <div class="grid grid-cols-2 md:grid-cols-4 gap-2.5">
-        <!-- 1. Attack -->
-        <div class="bg-zinc-900 border-2 border-red-500/60 rounded-xl p-2 flex flex-col justify-between hover:border-red-400 transition-all cursor-pointer spell-card" role="group" data-spell="STU">
-          <div>
-            <div class="flex justify-between items-center text-red-400 font-bold text-xs mb-1">
-              <span>⚔️ 基礎攻擊</span>
-            </div>
-            <h4 class="font-bold text-xs">昏昏倒地</h4>
-            <p class="text-[10px] text-zinc-400">造成 20 點傷害。</p>
-          </div>
-          <button onclick="playerCast('STU')" class="w-full mt-2 py-1 bg-red-950 text-red-200 text-[11px] font-bold rounded border border-red-500/40">出招 (20傷害)</button>
-        </div>
-
-        <div class="bg-zinc-900 border-2 border-orange-500/60 rounded-xl p-2 flex flex-col justify-between hover:border-orange-400 transition-all cursor-pointer spell-card" role="group" data-spell="INC">
-          <div>
-            <div class="flex justify-between items-center text-orange-400 font-bold text-xs mb-1">
-              <span>🔥 高熱火焰</span>
-            </div>
-            <h4 class="font-bold text-xs">行行火現</h4>
-            <p class="text-[10px] text-zinc-400">造成 30 點烈焰傷害。</p>
-          </div>
-          <button onclick="playerCast('INC')" class="w-full mt-2 py-1 bg-orange-950 text-orange-200 text-[11px] font-bold rounded border border-orange-500/40">出招 (30傷害)</button>
-        </div>
-
-        <!-- 2. Dark -->
-        <div class="bg-zinc-900 border-2 border-emerald-500/80 rounded-xl p-2 flex flex-col justify-between hover:border-emerald-400 transition-all cursor-pointer spell-card" role="group" data-spell="AK">
-          <div>
-            <div class="flex justify-between items-center text-emerald-400 font-bold text-xs mb-1">
-              <span>💀 黑魔法重擊</span>
-              <span id="akBadge" class="text-[9px] bg-emerald-950 px-1 rounded">READY</span>
-            </div>
-            <h4 class="font-bold text-xs text-emerald-300">阿哇呾喀呾啦</h4>
-            <p class="text-[10px] text-zinc-400">當前生命值減半！(CD 3 回合)</p>
-          </div>
-          <button onclick="playerCast('AK')" class="w-full mt-2 py-1 bg-emerald-950 text-emerald-200 text-[11px] font-bold rounded border border-emerald-500/40">對手血量減半</button>
-        </div>
-
-        <div class="bg-zinc-900 border-2 border-purple-500/60 rounded-xl p-2 flex flex-col justify-between hover:border-purple-400 transition-all cursor-pointer spell-card" role="group" data-spell="CRU">
-          <div>
-            <div class="flex justify-between items-center text-purple-400 font-bold text-xs mb-1">
-              <span>⚡ 黑魔法酷刑</span>
-            </div>
-            <h4 class="font-bold text-xs">咒咒虐</h4>
-            <p class="text-[10px] text-zinc-400">造成 25 點傷害。</p>
-          </div>
-          <button onclick="playerCast('CRU')" class="w-full mt-2 py-1 bg-purple-950 text-purple-200 text-[11px] font-bold rounded border border-purple-500/40">出招 (25傷害)</button>
-        </div>
-
-        <!-- 3. Defense -->
-        <div class="bg-zinc-900 border-2 border-blue-500/60 rounded-xl p-2 flex flex-col justify-between hover:border-blue-400 transition-all cursor-pointer spell-card" role="group" data-spell="PRO">
-          <div>
-            <div class="flex justify-between items-center text-blue-400 font-bold text-xs mb-1">
-              <span>🛡️ 傷害反彈</span>
-            </div>
-            <h4 class="font-bold text-xs">屏屏障</h4>
-            <p class="text-[10px] text-zinc-400">抵擋並 100% 反彈傷害！</p>
-          </div>
-          <button onclick="playerCast('PRO')" class="w-full mt-2 py-1 bg-blue-950 text-blue-200 text-[11px] font-bold rounded border border-blue-500/40">反彈護護罩</button>
-        </div>
-
-        <div class="bg-zinc-900 border-2 border-amber-500/80 rounded-xl p-2 flex flex-col justify-between hover:border-amber-400 transition-all cursor-pointer spell-card" role="group" data-spell="RID">
-          <div>
-            <div class="flex justify-between items-center text-amber-400 font-bold text-xs mb-1">
-              <span>🐤 搞笑魔法</span>
-            </div>
-            <h4 class="font-bold text-xs">叱叱，荒唐</h4>
-            <p class="text-[10px] text-zinc-400">變出黃鴨造成 20 傷害！</p>
-          </div>
-          <button onclick="playerCast('RID')" class="w-full mt-2 py-1 bg-amber-950 text-amber-200 text-[11px] font-bold rounded border border-amber-500/40">黃鴨攻擊</button>
-        </div>
-
-        <!-- 4. Support -->
-        <div class="bg-zinc-900 border-2 border-teal-500/60 rounded-xl p-2 flex flex-col justify-between hover:border-teal-400 transition-all cursor-pointer spell-card" role="group" data-spell="EPI">
-          <div>
-            <div class="flex justify-between items-center text-teal-400 font-bold text-xs mb-1">
-              <span>💚 治療復原</span>
-            </div>
-            <h4 class="font-bold text-xs">快快復甦</h4>
-            <p class="text-[10px] text-zinc-400">恢復 35 點生命值。</p>
-          </div>
-          <button onclick="playerCast('EPI')" class="w-full mt-2 py-1 bg-teal-950 text-teal-200 text-[11px] font-bold rounded border border-teal-500/40">補血 (+35HP)</button>
-        </div>
-
-        <div class="bg-zinc-900 border-2 border-cyan-500/60 rounded-xl p-2 flex flex-col justify-between hover:border-cyan-400 transition-all cursor-pointer spell-card" role="group" data-spell="REN">
-          <div>
-            <div class="flex justify-between items-center text-cyan-400 font-bold text-xs mb-1">
-              <span>✨ 淨化復原</span>
-            </div>
-            <h4 class="font-bold text-xs">復原咒</h4>
-            <p class="text-[10px] text-zinc-400">恢復 20 點生命值。</p>
-          </div>
-          <button onclick="playerCast('REN')" class="w-full mt-2 py-1 bg-cyan-950 text-cyan-200 text-[11px] font-bold rounded border border-cyan-500/40">回復 (+20HP)</button>
-        </div>
-      </div>
-    </div>
-    <section class="bg-zinc-900 border border-amber-500/30 rounded-xl p-4" aria-live="polite">
-      <p id="resultText">選擇魔咒出招，閱讀結果後按「繼續」。護盾保留至抵擋一次攻擊，不會疊加；索命咒不能致命。</p>
-      <button id="continueBtn" onclick="continueGame()" hidden class="mt-3 px-5 py-3 bg-amber-400 text-black rounded-lg font-bold">繼續：電腦出招</button>
+      <div class="command-lock" id="command-lock" hidden></div>
     </section>
-    <details class="text-sm text-zinc-300"><summary>本局紀錄</summary><div id="history" class="space-y-2 py-3"></div></details>
-  </main>
 
-  <script src="game.js"></script>
+    <details class="log-panel" id="log-panel" open>
+      <summary>對戰紀錄</summary>
+      <div id="battle-log" role="log" aria-label="對戰紀錄"></div>
+    </details>
+  </div>
+</main>
+
+<dialog id="mode-dialog" aria-labelledby="mode-title">
+  <div class="dialog-card">
+    <p class="dialog-kicker">霍格華茲決鬥社</p>
+    <h2 id="mode-title">⚔️ 魔咒決鬥</h2>
+    <ol class="howto">
+      <li><span>1</span><div><strong>選魔咒</strong>攻擊、黑魔法、防禦或支援</div></li>
+      <li><span>2</span><div><strong>選目標</strong>點目標按鈕或直接點角色卡</div></li>
+      <li><span>3</span><div><strong>看結算</strong>所有人同時出手，逐步揭曉結果</div></li>
+    </ol>
+    <div class="mode-options">
+      <button class="mode-btn" data-mode="1v1" type="button"><span class="mode-icon">⚔️</span><span><strong>1 對 1 決鬥</strong><small>你 vs 電腦，適合第一次玩</small></span></button>
+      <button class="mode-btn" data-mode="2v2" type="button"><span class="mode-icon">🛡️</span><span><strong>2 對 2 團隊戰</strong><small>與 AI 盟友合作，對抗兩名電腦</small></span></button>
+    </div>
+    <button id="resume-btn" class="ghost wide" type="button" hidden>返回目前對戰</button>
+    <p class="fineprint">非官方學生作品，魔咒效果為遊戲自訂。</p>
+  </div>
+</dialog>
+
+<dialog id="result-dialog" aria-labelledby="result-title">
+  <div class="dialog-card result-card" id="result-card"></div>
+</dialog>
+
+<dialog id="rules-dialog" aria-labelledby="rules-title">
+  <div class="dialog-card rules-card">
+    <div class="dialog-head"><h2 id="rules-title">遊戲規則</h2><button class="ghost small" id="rules-close" type="button">關閉</button></div>
+    <h3>目標</h3>
+    <p>每局把對方全隊 HP 打到 0，或用索命咒命中對手，即贏得該局。先取得 <strong>4</strong> 局勝利的一隊奪冠。</p>
+    <h3>每回合流程</h3>
+    <ol class="flow">
+      <li>所有巫師<strong>同時</strong>選擇指令（電腦不會偷看你的選擇）。</li>
+      <li>指令一起揭曉。</li>
+      <li>按優先次序結算：<strong>復原咒 → 防禦（屏障、護法、荒唐）→ 繳械 → 其他魔咒</strong>（按 P1→P4 次序）。</li>
+      <li>被昏迷的巫師跳過下一次行動，隊友可用復原咒救醒。</li>
+    </ol>
+    <h3>魔咒一覽</h3>
+    <div class="table-wrap"><table id="rules-table"><thead><tr><th>魔咒</th><th>類別</th><th>效果</th></tr></thead><tbody></tbody></table></div>
+    <h3>閱讀節奏</h3>
+    <p>右上角「結算速度」可選慢、標準、快或「逐步」。逐步模式下每一步都要按「下一步」才繼續。結算期間亦可點決鬥場中央直接看下一步。</p>
+  </div>
+</dialog>
+
+<script src="game.js"></script>
 </body>
 </html>
